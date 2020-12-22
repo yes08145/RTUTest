@@ -608,13 +608,27 @@ namespace TCPSocketCl
                     //string device = socketInfo.IP + ":" + socketInfo.PORT;
 
                     int device_num = 0;
-                    if (mod.usys_device_ID == 0x74) device_num = 1;
+                    if (mod.usys_device_ID == 0x74)device_num = 1;
+                    else
+                    {
+                        log = device_judge[device_num];
+                        return log;
+                    }
 
 
                     byte[] ret = TModbusRTU.MakeCRC16_byte(crc_sum, 7);
                     if ((ret[0] == mod.crc16[0]) && (ret[1] == mod.crc16[1]))
                     {
-                        log = "CRC16통과";
+                        string data1 = mod.data1_h.ToString("x2") + mod.data1_l.ToString("x2");
+                        string data2 = mod.data2_h.ToString("x2") + mod.data2_l.ToString("x2");
+                        int data1_dec = Convert.ToInt32(data1, 16);
+                        int data2_dec = Convert.ToInt32(data2, 16);
+                        data1 = data1_dec.ToString();
+                        data1 = data1.Substring(0, data1.Length-2) + "." + data1.Substring(data1.Length-2);
+                        data2 = data2_dec.ToString();
+                        data2 = data2.Substring(0, data2.Length - 2) + "." + data2.Substring(data2.Length - 2);
+                        log = "Device '" + device + "'에서 " + "RS-485 Modbus Data " + data1 + ", " + data2 + "수신";
+                        //log = "Device '" + device + "'에서 " + rtup.response_channel + "채널에서 " + logMsg[rtup.sensor_ID + 2];
                     }
                     else
                     {
