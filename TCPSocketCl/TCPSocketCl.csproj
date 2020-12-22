@@ -63,6 +63,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="TModbusRTU.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -86,6 +87,7 @@
     </Compile>
     <Compile Include="ResultSet.cs" />
     <Compile Include="RTUP.cs" />
+    <Compile Include="RTUP_Modbus.cs" />
     <Compile Include="SocketInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -106,6 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Properties\DataSources\RTUP_Modbus.datasource" />
     <None Include="Resources\icons8-web-address-100.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

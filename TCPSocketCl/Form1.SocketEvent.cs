@@ -391,15 +391,20 @@ namespace TCPSocketCl
             //else
             //{
                 rtup.usys_device_ID = 0x74;
-                rtup.sensor_ID = (byte)sensorID;
+            // 2020-12-18 sensorID 추가로 인한 주석(테스트중)
+                //rtup.sensor_ID = (byte)sensorID;
             //}
             //0 or 1 장비 선택
 
             
             try
             {
-                if (rtup.sensor_ID == 1)
+                // 2020-12-18 sensorID 추가로 인한 주석(테스트중)
+                //if (rtup.sensor_ID == 1)
+                if (sensorID == 1)
                 {
+                    // 2020-12-18 sensorID 추가
+                    rtup.sensor_ID = (byte)sensorID;
                     //if(data == 404 || aout_ch == 404) throw new FormatException("채널 또는 data가 올바르지 않습니다.");
                     // 4~20mA
                     rtup.ch_setting = (byte)aout_ch;
@@ -422,8 +427,12 @@ namespace TCPSocketCl
                     msg[7] = rtup.check_sum[1];
                     msg[8] = rtup.eof;
                 }
-                else if (rtup.sensor_ID == 2)
+                // 2020-12-18 sensorID 추가로 인한 주석(테스트중)
+                //else if (rtup.sensor_ID == 2)
+                else if(sensorID ==2)
                 {
+                    // 2020-12-18 sensorID 추가
+                    rtup.sensor_ID = (byte)sensorID;
                     rtup.ch_setting = (byte)ain_ch;
                     rtup.length = 0x08;
                     int checkSum = rtup.sof + rtup.usys_device_ID + rtup.length + rtup.sensor_ID + rtup.ch_setting;
@@ -440,8 +449,12 @@ namespace TCPSocketCl
                     msg[6] = rtup.check_sum[1];
                     msg[7] = rtup.eof;
                 }
-                else if (rtup.sensor_ID == 3)
+                // 2020-12-18 sensorID 추가로 인한 주석(테스트중)
+                //else if (rtup.sensor_ID == 3)
+                else if(sensorID == 3)
                 {
+                    // 2020-12-18 sensorID 추가
+                    rtup.sensor_ID = (byte)sensorID;
                     int checkSum = rtup.check_sum[0] * 256 + rtup.check_sum[1]+1;
                     rtup.check_sum[0] = (byte)(checkSum / 256);
                     rtup.check_sum[1] = (byte)(checkSum % 256);
@@ -456,8 +469,12 @@ namespace TCPSocketCl
                     msg[7] = rtup.check_sum[1];
                     msg[8] = rtup.eof;
                 }
-                else if(rtup.sensor_ID == 4)
+                // 2020-12-18 sensorID 추가로 인한 주석(테스트중)
+                //else if (rtup.sensor_ID == 4)
+                else if(sensorID == 4)
                 {
+                    // 2020-12-18 sensorID 추가
+                    rtup.sensor_ID = (byte)sensorID;
                     // digit 0/1
                     rtup.ch_setting = (byte)dout_ch;
                     if(data != 0 && data != 1)
@@ -482,6 +499,35 @@ namespace TCPSocketCl
                     msg[7] = rtup.check_sum[1];
                     msg[8] = rtup.eof;
                 }
+                //rs-485
+                else if(sensorID == 5)
+                {
+                    RTUP_Modbus rtup_modbus = new RTUP_Modbus(0x02, 0x74, 0x0D, 0x05, 0x00, 0x01, 0x03, 0x01, 0xF4, 0x00, 0x02);
+                    byte[] target = new byte[6] {
+                        rtup_modbus.slave_addr,
+                        rtup_modbus.func,
+                        rtup_modbus.start_addrH,
+                        rtup_modbus.start_addrL,
+                        rtup_modbus.length_H,
+                        rtup_modbus.length_L
+                    };
+
+                    rtup_modbus.crc = TModbusRTU.MakeCRC16_byte(target, 6);
+                    msg = new byte[13];
+                    msg[0] = rtup_modbus.sof;
+                    msg[1] = rtup_modbus.usys_device_ID;
+                    msg[2] = rtup_modbus.length;
+                    msg[3] = rtup_modbus.sensor_ID;
+                    msg[4] = rtup_modbus.packet_mode;
+                    msg[5] = rtup_modbus.slave_addr;
+                    msg[6] = rtup_modbus.func;
+                    msg[7] = rtup_modbus.start_addrH;
+                    msg[8] = rtup_modbus.start_addrL;
+                    msg[9] = rtup_modbus.length_H;
+                    msg[10] = rtup_modbus.length_L;
+                    msg[11] = rtup_modbus.crc[0];
+                    msg[12] = rtup_modbus.crc[1];
+                }
                 else
                 {
                     throw new NullReferenceException("잘못된 요청명령");
@@ -502,82 +548,119 @@ namespace TCPSocketCl
 
         public string JudgeAction(string txt, string hex_cksum, SocketInfo socketInfo)
         {
-            RTUP rtup = new RTUP();
             string log = string.Empty;
-            rtup.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x"+txt.Split('-')[1], 16));
-            rtup.length = Convert.ToByte(Convert.ToInt32(txt.Split('-')[2], 16));
-            rtup.sensor_ID = Convert.ToByte(txt.Split('-')[3]);
-            rtup.response_channel = Convert.ToByte(txt.Split('-')[4]);
-            rtup.data = Convert.ToByte(Convert.ToInt32(txt.Split('-')[5],16)); // 나중에 data값으로 문제가 생기면 if안의 지역으로 위치수정
-            string device = socketInfo.IP + ":" + socketInfo.PORT;
-            string start_cksum = string.Empty;
-            string last_cksum = string.Empty;
-            int device_num = 0;
-            if (rtup.usys_device_ID == 0x74) device_num = 1;
-            else
+            byte sensor_data = Convert.ToByte(txt.Split('-')[3]);
+            if (sensor_data == 5)
             {
-                log = device_judge[device_num];
+                RTUP_Modbus rtup_m = new RTUP_Modbus();
+                rtup_m.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
+                rtup_m.length = Convert.ToByte(Convert.ToInt32(txt.Split('-')[2], 16));
+                /*rtup_m.sensor_ID = sensor_data;
+                rtup_m.packet_mode = Convert.ToByte(Convert.ToInt32(txt.Split('-')[4]));
+                rtup_m.slave_addr = Convert.ToByte(Convert.ToInt32(txt.Split('-')[5],16));
+                rtup_m.func = Convert.ToByte(Convert.ToInt32(txt.Split('-')[6], 16));
+                rtup_m.start_addrH = Convert.ToByte(Convert.ToInt32(txt.Split('-')[7], 16));
+                rtup_m.start_addrL = Convert.ToByte(Convert.ToInt32(txt.Split('-')[8], 16));
+                rtup_m.length_H = Convert.ToByte(Convert.ToInt32(txt.Split('-')[9], 16));
+                rtup_m.length_L = Convert.ToByte(Convert.ToInt32(txt.Split('-')[10], 16));
+                rtup_m.crc[0] = Convert.ToByte(Convert.ToInt32(txt.Split('-')[11], 16));
+                rtup_m.crc[1] = Convert.ToByte(Convert.ToInt32(txt.Split('-')[12], 16));
+                */
+                string device = socketInfo.IP + ":" + socketInfo.PORT;
+                int device_num = 0;
+                if (rtup_m.usys_device_ID == 0x74) device_num = 1;
+                else
+                {
+                    log = device_judge[device_num];
+                    return log;
+                }
+                if (rtup_m.length == 13) log = "Device '" + device + "'으로 RS-485 Modbus Data Tx Packet 전송";
+                else
+                {
+                    log = "잘못된 크기로 인한 전송 실패";
+                    
+                }
                 return log;
             }
-            if (hex_cksum.Length >= 3)
-            {
-                start_cksum = hex_cksum.Substring(0, hex_cksum.Length - 2);
-                last_cksum = hex_cksum.Substring(hex_cksum.Length - 2);
-                if (start_cksum.Length == 1)
-                {
-                    start_cksum = "0" + start_cksum;
-                }
-            }
             else
             {
-                start_cksum = "00";
-                last_cksum = hex_cksum;
-                if (last_cksum.Length == 1)
+                RTUP rtup = new RTUP();
+
+                rtup.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
+                rtup.length = Convert.ToByte(Convert.ToInt32(txt.Split('-')[2], 16));
+                rtup.sensor_ID = Convert.ToByte(txt.Split('-')[3]);
+                rtup.response_channel = Convert.ToByte(txt.Split('-')[4]);
+                rtup.data = Convert.ToByte(Convert.ToInt32(txt.Split('-')[5], 16)); // 나중에 data값으로 문제가 생기면 if안의 지역으로 위치수정
+                string device = socketInfo.IP + ":" + socketInfo.PORT;
+                string start_cksum = string.Empty;
+                string last_cksum = string.Empty;
+                int device_num = 0;
+                if (rtup.usys_device_ID == 0x74) device_num = 1;
+                else
                 {
-                    last_cksum = "0" + last_cksum;
+                    log = device_judge[device_num];
+                    return log;
                 }
-            }
-            if (start_cksum != txt.Split('-')[rtup.length - 3] || last_cksum != txt.Split('-')[rtup.length - 2])
-            {
-                log = "CheckSum 오류";
+                if (hex_cksum.Length >= 3)
+                {
+                    start_cksum = hex_cksum.Substring(0, hex_cksum.Length - 2);
+                    last_cksum = hex_cksum.Substring(hex_cksum.Length - 2);
+                    if (start_cksum.Length == 1)
+                    {
+                        start_cksum = "0" + start_cksum;
+                    }
+                }
+                else
+                {
+                    start_cksum = "00";
+                    last_cksum = hex_cksum;
+                    if (last_cksum.Length == 1)
+                    {
+                        last_cksum = "0" + last_cksum;
+                    }
+                }
+                if (start_cksum != txt.Split('-')[rtup.length - 3] || last_cksum != txt.Split('-')[rtup.length - 2])
+                {
+                    log = "CheckSum 오류";
+                    return log;
+                }
+                //로그를 띄워주자 (체크섬 오류)
+
+                if (rtup.sensor_ID == 1)
+                {
+                    if (rtup.response_channel == 0 || rtup.response_channel == 1)
+                    {
+                        if (rtup.length == 8) log = "Device '" + device + "'에서 " + rtup.response_channel + "채널에서 " + logMsg[rtup.sensor_ID + 2];
+                        else log = "Device '" + device + "'에서 " + rtup.response_channel + "채널로 " + logMsg[rtup.sensor_ID - 1]; // device_judge[device_num]
+                    }
+                    else log = "Format 오류";
+                }
+                else if (rtup.sensor_ID == 2)
+                {
+                    if (rtup.response_channel == 0 || rtup.response_channel == 1)
+                    {
+                        if (rtup.length == 9 && rtup.data >= 4 && rtup.data <= 20) log = "Device '" + device + "'에서 " + rtup.response_channel + "채널에서 '" + rtup.data + "mA'의 " + logMsg[rtup.sensor_ID + 2];
+                        else if (rtup.length == 8) log = "Device '" + device + "'에서 " + rtup.response_channel + "채널로 " + logMsg[rtup.sensor_ID - 1];
+                        else throw new Exception("continue");
+                    }
+                    else log = "Format 오류";
+                }
+                else if (rtup.sensor_ID == 3)
+                {
+                    if ((rtup.response_channel == 0 || rtup.response_channel == 1 || rtup.response_channel == 2 || rtup.response_channel == 3) && rtup.data < 2)
+                        log = "Device '" + device + "'에서 " + rtup.response_channel + "채널에서 시그널'" + rtup.data + "'  " + logMsg[rtup.sensor_ID + 2];
+                    else log = "Format 오류";
+                }
+                else if (rtup.sensor_ID == 4)
+                {
+                    if (rtup.response_channel == 0 || rtup.response_channel == 1 || rtup.response_channel == 2 || rtup.response_channel == 3)
+                        log = "Device '" + device + "'에서 " + rtup.response_channel + "채널로 시그널'" + rtup.data + "'  " + logMsg[rtup.sensor_ID - 2];
+                    else log = "Format 오류";
+                }
+                else log = "SensorID 오류";
+
                 return log;
             }
-            //로그를 띄워주자 (체크섬 오류)
-
-            if (rtup.sensor_ID == 1)
-            {
-                if (rtup.response_channel == 0 || rtup.response_channel == 1)
-                {
-                    if (rtup.length == 8) log = "Device '" + device + "'에서 " + rtup.response_channel + "채널에서 " + logMsg[rtup.sensor_ID + 2];
-                    else log = "Device '" + device + "'에서 " + rtup.response_channel + "채널로 " + logMsg[rtup.sensor_ID - 1]; // device_judge[device_num]
-                }
-                else log = "Format 오류";
-            }
-            else if (rtup.sensor_ID == 2)
-            {
-                if (rtup.response_channel == 0 || rtup.response_channel == 1)
-                {
-                    if (rtup.length == 9 && rtup.data >= 4 && rtup.data <= 20) log = "Device '" + device + "'에서 " + rtup.response_channel + "채널에서 '" + rtup.data + "mA'의 " + logMsg[rtup.sensor_ID + 2];
-                    else if (rtup.length == 8) log = "Device '" + device + "'에서 " + rtup.response_channel + "채널로 " + logMsg[rtup.sensor_ID - 1];
-                    else throw new Exception("continue");
-                }
-                else log = "Format 오류";
-            }
-            else if (rtup.sensor_ID == 3)
-            {
-                if((rtup.response_channel == 0 || rtup.response_channel == 1 || rtup.response_channel == 2 || rtup.response_channel == 3) && rtup.data <2)
-                log = "Device '" + device + "'에서 " + rtup.response_channel + "채널에서 시그널'" + rtup.data + "'  " + logMsg[rtup.sensor_ID + 2];
-                else log = "Format 오류";
-            }
-            else if (rtup.sensor_ID == 4)
-            {
-                if (rtup.response_channel == 0 || rtup.response_channel == 1 || rtup.response_channel == 2 || rtup.response_channel == 3)
-                log = "Device '" + device + "'에서 " + rtup.response_channel + "채널로 시그널'" + rtup.data + "'  " + logMsg[rtup.sensor_ID - 2];
-                else log = "Format 오류";
-            }
-            else log = "SensorID 오류";
-
-            return log;
         }
 
         private ResultSet SplitAndCksum(SocketInfo socketInfo, Queue<byte> recvBuff)
@@ -668,6 +751,44 @@ namespace TCPSocketCl
                                 hex_cksum = String.Format("{0:x2}", dec_cksum).ToUpper();
                                 break;
                             }
+                        }
+                        else if(length_data == 0x0D)
+                        {
+                            CheckQueue(socketInfo, recvBuff);
+                            byte sensor_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte packetM_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte slave_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte func_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte startH_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte startL_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte lengthH_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte lengthL_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte crc_data1 = recvBuff.Dequeue();
+                            i++; CheckQueue(socketInfo, recvBuff);
+                            byte crc_data2 = recvBuff.Dequeue();
+                            i++;
+                            byte[] sendBuff = new byte[13] {sof_data, device_data,length_data, sensor_data, packetM_data, slave_data, func_data, startH_data,
+                            startL_data, lengthH_data, lengthL_data, crc_data1, crc_data2};
+                            socketInfo.r_Buff = sendBuff;
+                            strHexSplit = BitConverter.ToString(sendBuff);
+                            hex_cksum = "EE";
+                            break;
                         }
                     }
                 }

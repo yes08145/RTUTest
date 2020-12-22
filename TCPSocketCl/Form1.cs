@@ -54,6 +54,7 @@ namespace TCPSocketCl
         public delegate void LogDelegate(string msg);
         //public static SocketClass socketClass = null;
         private static List<string> ipList = new List<string>();
+        private static List<RTUP_Modbus> saved_protocal = new List<RTUP_Modbus>();
 
 
         public Form1()
@@ -75,6 +76,7 @@ namespace TCPSocketCl
             comboBox1.SelectedIndex = 0;
             //this.dataGridView1.RowHeadersDefaultCellStyle.BackColor = System.Drawing.SystemColors.ScrollBar;
             this.ActiveControl = textBox_IP1;
+            Dgv_protocol_create();
         }
 
         private void btn_connect_Click(object sender, EventArgs e)
@@ -108,10 +110,6 @@ namespace TCPSocketCl
         private void ListboxFocus()
         {
             listbox1.SelectedIndex = listbox1.Items.Count - 1;
-        }
-        public void lll()
-        {
-
         }
 
         public void Log(string msg)
@@ -416,6 +414,105 @@ namespace TCPSocketCl
         private void metroButton1_Click(object sender, EventArgs e)
         {
             listbox1.Items.Clear();
+        }
+        private void Dgv_protocol_create()
+        {
+            RTUP_Modbus rtup_modbus = new RTUP_Modbus(0x02, 0x74, 0x0D, 0x05, 0x00, 0x01, 0x03, 0x01, 0xF4, 0x00, 0x02);
+            byte[] target = new byte[6] {
+                rtup_modbus.slave_addr,
+                rtup_modbus.func,
+                rtup_modbus.start_addrH,
+                rtup_modbus.start_addrL,
+                rtup_modbus.length_H,
+                rtup_modbus.length_L
+            };
+
+            rtup_modbus.crc = TModbusRTU.MakeCRC16_byte(target, 6);
+            saved_protocal.Add(rtup_modbus);
+            dgv_protocol.AutoGenerateColumns = false;
+            DataGridViewTextBoxColumn makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "sof";
+            makeColumn.HeaderText = "SOF";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "usys_device_ID";
+            makeColumn.HeaderText = "U-Sys Device ID";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "length";
+            makeColumn.HeaderText = "Length";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "sensor_ID";
+            makeColumn.HeaderText = "Sensor ID";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "packet_mode";
+            makeColumn.HeaderText = "Packet 구분";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "slave_addr";
+            makeColumn.HeaderText = "Slave Address";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "func";
+            makeColumn.HeaderText = "Function";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "start_addrH";
+            makeColumn.HeaderText = "Start Address (HIGH)";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "start_addrL";
+            makeColumn.HeaderText = "Start Address (LOW)";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "length_H";
+            makeColumn.HeaderText = "Length(High)";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+            makeColumn = new DataGridViewTextBoxColumn();
+            makeColumn.DataPropertyName = "length_L";
+            makeColumn.HeaderText = "Length(Low)";
+            makeColumn.DefaultCellStyle.Format = "X02";
+            dgv_protocol.Columns.Add(makeColumn);
+
+            dgv_protocol.DataSource = saved_protocal;
+        }
+
+        private void Btn_send_rs485_Click(object sender, EventArgs e)
+        {
+            sensorID = 5;
+            try
+            {
+                foreach (SocketInfo usedSockInfo in socketInfo)
+                {
+                    if (usedSockInfo.index == dgv_constate.SelectedRows[0].Index)
+                    {
+                        if (usedSockInfo.conn)
+                        {
+                            StartThread(usedSockInfo, Send, "send");
+                        }
+                    }
+                }
+            }
+            catch (NullReferenceException ex)
+            {
+                MessageBox.Show("설정 값을 보낼 서버를 선택해주십시오.");
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                MessageBox.Show("설정 값을 보낼 서버를 선택해주십시오.");
+            }
         }
     }
 }
