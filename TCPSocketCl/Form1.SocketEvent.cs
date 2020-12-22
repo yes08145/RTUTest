@@ -550,37 +550,79 @@ namespace TCPSocketCl
         {
             string log = string.Empty;
             byte sensor_data = Convert.ToByte(txt.Split('-')[3]);
+            
             if (sensor_data == 5)
             {
-                RTUP_Modbus rtup_m = new RTUP_Modbus();
-                rtup_m.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
-                rtup_m.length = Convert.ToByte(Convert.ToInt32(txt.Split('-')[2], 16));
-                /*rtup_m.sensor_ID = sensor_data;
-                rtup_m.packet_mode = Convert.ToByte(Convert.ToInt32(txt.Split('-')[4]));
-                rtup_m.slave_addr = Convert.ToByte(Convert.ToInt32(txt.Split('-')[5],16));
-                rtup_m.func = Convert.ToByte(Convert.ToInt32(txt.Split('-')[6], 16));
-                rtup_m.start_addrH = Convert.ToByte(Convert.ToInt32(txt.Split('-')[7], 16));
-                rtup_m.start_addrL = Convert.ToByte(Convert.ToInt32(txt.Split('-')[8], 16));
-                rtup_m.length_H = Convert.ToByte(Convert.ToInt32(txt.Split('-')[9], 16));
-                rtup_m.length_L = Convert.ToByte(Convert.ToInt32(txt.Split('-')[10], 16));
-                rtup_m.crc[0] = Convert.ToByte(Convert.ToInt32(txt.Split('-')[11], 16));
-                rtup_m.crc[1] = Convert.ToByte(Convert.ToInt32(txt.Split('-')[12], 16));
-                */
-                string device = socketInfo.IP + ":" + socketInfo.PORT;
-                int device_num = 0;
-                if (rtup_m.usys_device_ID == 0x74) device_num = 1;
-                else
+                byte packet_data = Convert.ToByte(txt.Split('-')[4]);
+                if (packet_data == 0)
                 {
-                    log = device_judge[device_num];
+                    RTUP_Modbus rtup_m = new RTUP_Modbus();
+                    rtup_m.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
+                    rtup_m.length = Convert.ToByte(Convert.ToInt32(txt.Split('-')[2], 16));
+                    /*rtup_m.sensor_ID = sensor_data;
+                    rtup_m.packet_mode = Convert.ToByte(Convert.ToInt32(txt.Split('-')[4]));
+                    rtup_m.slave_addr = Convert.ToByte(Convert.ToInt32(txt.Split('-')[5],16));
+                    rtup_m.func = Convert.ToByte(Convert.ToInt32(txt.Split('-')[6], 16));
+                    rtup_m.start_addrH = Convert.ToByte(Convert.ToInt32(txt.Split('-')[7], 16));
+                    rtup_m.start_addrL = Convert.ToByte(Convert.ToInt32(txt.Split('-')[8], 16));
+                    rtup_m.length_H = Convert.ToByte(Convert.ToInt32(txt.Split('-')[9], 16));
+                    rtup_m.length_L = Convert.ToByte(Convert.ToInt32(txt.Split('-')[10], 16));
+                    rtup_m.crc[0] = Convert.ToByte(Convert.ToInt32(txt.Split('-')[11], 16));
+                    rtup_m.crc[1] = Convert.ToByte(Convert.ToInt32(txt.Split('-')[12], 16));
+                    */
+                    string device = socketInfo.IP + ":" + socketInfo.PORT;
+                    int device_num = 0;
+                    if (rtup_m.usys_device_ID == 0x74) device_num = 1;
+                    else
+                    {
+                        log = device_judge[device_num];
+                        return log;
+                    }
+                    if (rtup_m.length == 13) log = "Device '" + device + "'으로 RS-485 Modbus Data Tx Packet 전송";
+                    else
+                    {
+                        log = "잘못된 크기로 인한 전송 실패";
+
+                    }
                     return log;
                 }
-                if (rtup_m.length == 13) log = "Device '" + device + "'으로 RS-485 Modbus Data Tx Packet 전송";
-                else
+                else if (packet_data == 1)
                 {
-                    log = "잘못된 크기로 인한 전송 실패";
-                    
+                    ModbusRec mod = new ModbusRec();
+
+                    string device = socketInfo.IP + ":" + socketInfo.PORT;
+                    mod.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
+                    mod.length = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[2], 16));
+
+                    mod.s_address = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[5], 16));
+                    mod.rs_function = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[6], 16));
+                    mod.byte_count = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[7], 16));
+                    mod.data1_h = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[8], 16));
+                    mod.data1_l = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[9], 16));
+                    mod.data2_h = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[10], 16));
+                    mod.data2_l = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[11], 16));
+                    mod.crc16[0] = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[12], 16));
+                    mod.crc16[1] = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[13], 16));
+
+                    byte[] crc_sum = new byte[] { mod.s_address, mod.rs_function, mod.byte_count, mod.data1_h, mod.data1_l, mod.data2_h, mod.data2_l };
+                    //string device = socketInfo.IP + ":" + socketInfo.PORT;
+
+                    int device_num = 0;
+                    if (mod.usys_device_ID == 0x74) device_num = 1;
+
+
+                    byte[] ret = TModbusRTU.MakeCRC16_byte(crc_sum, 7);
+                    if ((ret[0] == mod.crc16[0]) && (ret[1] == mod.crc16[1]))
+                    {
+                        log = "CRC16통과";
+                    }
+                    else
+                    {
+                        log = "CRC Check 오류";
+                    }
+                    return log;
                 }
-                return log;
+                else return ""; 
             }
             else
             {
@@ -790,8 +832,8 @@ namespace TCPSocketCl
                             hex_cksum = "EE";
                             break;
                         }
-                    }
-                }
+                    
+                
                         else if (length_data == 0x0E)
                         {
                             CheckQueue(socketInfo, recvBuff);
@@ -858,42 +900,46 @@ namespace TCPSocketCl
             }
         }
 
-        private string CRC16Check(string txt, SocketInfo socketInfo)
-        {
-            ModbusRec mod = new ModbusRec();
-            string log = string.Empty;
-            string device = socketInfo.IP + ":" + socketInfo.PORT;
-            mod.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
-            mod.length = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[2], 16));
-            mod.sensor_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[3], 16));
-            mod.packet = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[4], 16));
-            mod.s_address = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[5], 16));
-            mod.rs_function = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[6], 16));
-            mod.byte_count = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[7], 16));
-            mod.data1_h = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[8], 16));
-            mod.data1_l = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[9], 16));
-            mod.data2_h = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[10], 16));
-            mod.data2_l = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[11], 16));
-            mod.crc16[0] = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[12], 16));
-            mod.crc16[1] = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[13], 16));
+        //private string CRC16Check(string txt, SocketInfo socketInfo)
+        //{
+        //    ModbusRec mod = new ModbusRec();
+        //    string log = string.Empty;
+        //    string device = socketInfo.IP + ":" + socketInfo.PORT;
+        //    mod.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
+        //    mod.length = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[2], 16));
+        //    mod.sensor_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[3], 16));
+        //    mod.packet = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[4], 16));
 
-            byte[] crc_sum = new byte[] { mod.s_address, mod.rs_function, mod.byte_count, mod.data1_h, mod.data1_l, mod.data2_h, mod.data2_l };
-            //string device = socketInfo.IP + ":" + socketInfo.PORT;
 
-            int device_num = 0;
-            if (mod.usys_device_ID == 0x74) device_num = 1;
 
-            TModbusRTU modbusRTU = new TModbusRTU();
-            byte[] ret = modbusRTU.MakeCRC16_byte(crc_sum, 7);
-            if((ret[0] == mod.crc16[0]) && (ret[1] == mod.crc16[1]))
-            {
-                log = "CRC16통과";
-            }
-            else
-            {
-                log = "CRC Check 오류";
-            }
-            return log;
-        }
+
+        //    mod.s_address = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[5], 16));
+        //    mod.rs_function = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[6], 16));
+        //    mod.byte_count = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[7], 16));
+        //    mod.data1_h = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[8], 16));
+        //    mod.data1_l = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[9], 16));
+        //    mod.data2_h = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[10], 16));
+        //    mod.data2_l = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[11], 16));
+        //    mod.crc16[0] = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[12], 16));
+        //    mod.crc16[1] = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[13], 16));
+
+        //    byte[] crc_sum = new byte[] { mod.s_address, mod.rs_function, mod.byte_count, mod.data1_h, mod.data1_l, mod.data2_h, mod.data2_l };
+        //    //string device = socketInfo.IP + ":" + socketInfo.PORT;
+
+        //    int device_num = 0;
+        //    if (mod.usys_device_ID == 0x74) device_num = 1;
+
+        //    TModbusRTU modbusRTU = new TModbusRTU();
+        //    byte[] ret = modbusRTU.MakeCRC16_byte(crc_sum, 7);
+        //    if((ret[0] == mod.crc16[0]) && (ret[1] == mod.crc16[1]))
+        //    {
+        //        log = "CRC16통과";
+        //    }
+        //    else
+        //    {
+        //        log = "CRC Check 오류";
+        //    }
+        //    return log;
+        //}
     }
 }

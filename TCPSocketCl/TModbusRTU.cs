@@ -38,7 +38,7 @@ namespace TCPSocketCl
         0X4380, 0X8341, 0X4100, 0X81C1, 0X8081, 0X4040
         };
 
-        
+
         public static byte[] MakeCRC16_byte(byte[] bytes, int ilen)
         {
             int icrc = 0xFFFF;
