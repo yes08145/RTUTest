@@ -8,7 +8,7 @@ namespace TCPSocketCl
 {
     class TModbusRTU
     {
-        private readonly ushort[] wCRCTable =
+        private static readonly ushort[] wCRCTable =
         {
         0X0000, 0XC0C1, 0XC181, 0X0140, 0XC301, 0X03C0, 0X0280, 0XC241, 0XC601, 0X06C0,
         0X0780, 0XC741, 0X0500, 0XC5C1, 0XC481, 0X0440, 0XCC01, 0X0CC0, 0X0D80, 0XCD41,
@@ -38,8 +38,8 @@ namespace TCPSocketCl
         0X4380, 0X8341, 0X4100, 0X81C1, 0X8081, 0X4040
         };
 
-
-        public byte[] MakeCRC16_byte(byte[] bytes, int ilen)
+        
+        public static byte[] MakeCRC16_byte(byte[] bytes, int ilen)
         {
             int icrc = 0xFFFF;
             for (int i = 0; i < ilen; i++)
@@ -47,8 +47,10 @@ namespace TCPSocketCl
                 icrc = (icrc >> 8) ^ wCRCTable[(icrc ^ bytes[i]) & 0xff];
             }
             byte[] ret = BitConverter.GetBytes((ushort)icrc);
+            //reverse
             Array.Reverse(ret);
             return ret;
         }
     }
+
 }
