@@ -33,4 +33,6 @@ namespace TCPSocketCl
         public byte response_channel;
 
     }
+
+
 }

@@ -256,11 +256,19 @@ namespace TCPSocketCl
                             // 테스트 결과 send가 recv log앞에 있어서 출력창에 recv-send순으로 log가 뜨지않고
                             // send-recv순으로 뜸
                             // 따라서 JudgeAction 순서 앞으로 변경
-                            log_result = JudgeAction(strHexSplit, hex_cksum, socketInfo);
+                            if (hex_cksum == "EE" && resultSet == 5)
+                            {
+                                log_result = CRC16Check(strHexSplit, socketInfo);
+                            }
+                            else
+                            {
+                                log_result = JudgeAction(strHexSplit, hex_cksum, socketInfo);
+                            }
+                            
                         }
                         catch (IndexOutOfRangeException e)
                         {
-                            resultSet = 5; // resultSet은 SensorID의 값이기 때문에 아래 if문에 걸리지 않게만 즉, resultSet을 0,3이 아닌 다른값으로 지정하면 됨
+                            resultSet = 7 ; // resultSet은 SensorID의 값이기 때문에 아래 if문에 걸리지 않게만 즉, resultSet을 0,3이 아닌 다른값으로 지정하면 됨
                             log_result = "Index 오류 발생";
                         }
                         catch(Exception e)
@@ -669,8 +677,52 @@ namespace TCPSocketCl
                                 break;
                             }
                         }
+                        else if (length_data == 0x0E)
+                        {
+                            CheckQueue(socketInfo, recvBuff);
+                            byte sensor_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte packet_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte slave_data = recvBuff.Dequeue();
+                            i++;                           
+                            CheckQueue(socketInfo, recvBuff);
+                            byte function_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte bcount_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte data1_h_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte data1_l_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte data2_h_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte data2_l_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte crc1_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte crc2_data = recvBuff.Dequeue();
+                            i++;
+                            //if eof 삭제
+                            byte[] receiveBuff = new byte[14] { sof_data, device_data, length_data, sensor_data, packet_data, slave_data, function_data, bcount_data,
+                                                                data1_h_data, data1_l_data, data2_h_data, data2_l_data, crc1_data, crc2_data};
+                            socketInfo.r_Buff = receiveBuff;
+                            strHexSplit = BitConverter.ToString(receiveBuff);
+                            hex_cksum = String.Format("{0:x2}", 238).ToUpper();
+                            break;
+                        }
                     }
                 }
+                
                 if (strHexSplit != string.Empty )
                 {
                     resultSet = Convert.ToInt32(strHexSplit.Split('-')[3], 16);
@@ -691,5 +743,42 @@ namespace TCPSocketCl
             }
         }
 
+        private string CRC16Check(string txt, SocketInfo socketInfo)
+        {
+            ModbusRec mod = new ModbusRec();
+            string log = string.Empty;
+            string device = socketInfo.IP + ":" + socketInfo.PORT;
+            mod.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
+            mod.length = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[2], 16));
+            mod.sensor_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[3], 16));
+            mod.packet = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[4], 16));
+            mod.s_address = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[5], 16));
+            mod.rs_function = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[6], 16));
+            mod.byte_count = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[7], 16));
+            mod.data1_h = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[8], 16));
+            mod.data1_l = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[9], 16));
+            mod.data2_h = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[10], 16));
+            mod.data2_l = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[11], 16));
+            mod.crc16[0] = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[12], 16));
+            mod.crc16[1] = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[13], 16));
+
+            byte[] crc_sum = new byte[] { mod.s_address, mod.rs_function, mod.byte_count, mod.data1_h, mod.data1_l, mod.data2_h, mod.data2_l };
+            //string device = socketInfo.IP + ":" + socketInfo.PORT;
+
+            int device_num = 0;
+            if (mod.usys_device_ID == 0x74) device_num = 1;
+
+            TModbusRTU modbusRTU = new TModbusRTU();
+            byte[] ret = modbusRTU.MakeCRC16_byte(crc_sum, 7);
+            if((ret[0] == mod.crc16[0]) && (ret[1] == mod.crc16[1]))
+            {
+                log = "CRC16통과";
+            }
+            else
+            {
+                log = "CRC Check 오류";
+            }
+            return log;
+        }
     }
 }
