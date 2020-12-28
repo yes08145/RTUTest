@@ -502,7 +502,14 @@ namespace TCPSocketCl
                 //rs-485
                 else if(sensorID == 5)
                 {
-                    RTUP_Modbus rtup_modbus = new RTUP_Modbus(0x02, 0x74, 0x0D, 0x05, 0x00, 0x01, 0x03, 0x01, 0xF4, 0x00, 0x02);
+                    RTUP_Modbus<string> rtup_protocol = saved_protocal[dgv_protocol.CurrentCell.RowIndex];
+                    RTUP_Modbus<byte> rtup_modbus = new RTUP_Modbus<byte>(
+                        Convert.ToByte(rtup_protocol.sof, 16), Convert.ToByte(rtup_protocol.usys_device_ID, 16),
+                        Convert.ToByte(rtup_protocol.length, 16), Convert.ToByte(rtup_protocol.sensor_ID, 16),
+                        Convert.ToByte(rtup_protocol.packet_mode, 16), Convert.ToByte(rtup_protocol.slave_addr, 16),
+                        Convert.ToByte(rtup_protocol.func, 16), Convert.ToByte(rtup_protocol.start_addrH, 16),
+                        Convert.ToByte(rtup_protocol.start_addrL, 16), Convert.ToByte(rtup_protocol.length_H, 16),
+                        Convert.ToByte(rtup_protocol.length_L,16));
                     byte[] target = new byte[6] {
                         rtup_modbus.slave_addr,
                         rtup_modbus.func,
@@ -527,6 +534,39 @@ namespace TCPSocketCl
                     msg[10] = rtup_modbus.length_L;
                     msg[11] = rtup_modbus.crc[0];
                     msg[12] = rtup_modbus.crc[1];
+                }
+                else if(sensorID == 6)
+                {
+                    RTUP_232<string> rtup_protocol = saved_protocal_232[dgv_protocol_232.CurrentCell.RowIndex];
+                    RTUP_232<byte> rtup_232 = new RTUP_232<byte>(
+                        Convert.ToByte(rtup_protocol.sof, 16), Convert.ToByte(rtup_protocol.usys_device_ID, 16),
+                        Convert.ToByte(rtup_protocol.length, 16), Convert.ToByte(rtup_protocol.sensor_ID, 16),
+                        Convert.ToByte(rtup_protocol.packet_mode, 16), Convert.ToByte(rtup_protocol.frame_header, 16),
+                        Convert.ToByte(rtup_protocol.module_address, 16), Convert.ToByte(rtup_protocol.command_length, 16),
+                        Convert.ToByte(rtup_protocol.command, 16), Convert.ToByte(rtup_protocol.relay_1, 16),
+                        Convert.ToByte(rtup_protocol.relay_2, 16), Convert.ToByte(rtup_protocol.relay_3, 16),
+                        Convert.ToByte(rtup_protocol.relay_4, 16));
+                    int checkSum = rtup_232.frame_header + rtup_232.module_address + rtup_232.command_length
+                        + rtup_232.command + rtup_232.relay_1 + rtup_232.relay_2 + rtup_232.relay_3 + rtup_232.relay_4;
+                    rtup_232.check_sum[0] = (byte)(checkSum / 256);
+                    rtup_232.check_sum[1] = (byte)(checkSum % 256);
+
+                    msg = new byte[15];
+                    msg[0] = rtup_232.sof;
+                    msg[1] = rtup_232.usys_device_ID;
+                    msg[2] = rtup_232.length;
+                    msg[3] = rtup_232.sensor_ID;
+                    msg[4] = rtup_232.packet_mode;
+                    msg[5] = rtup_232.frame_header;
+                    msg[6] = rtup_232.module_address;
+                    msg[7] = rtup_232.command_length;
+                    msg[8] = rtup_232.command;
+                    msg[9] = rtup_232.relay_1;
+                    msg[10] = rtup_232.relay_2;
+                    msg[11] = rtup_232.relay_3;
+                    msg[12] = rtup_232.relay_4;
+                    msg[13] = rtup_232.check_sum[0];
+                    msg[14] = rtup_232.check_sum[1];
                 }
                 else
                 {
@@ -556,7 +596,7 @@ namespace TCPSocketCl
                 byte packet_data = Convert.ToByte(txt.Split('-')[4]);
                 if (packet_data == 0)
                 {
-                    RTUP_Modbus rtup_m = new RTUP_Modbus();
+                    RTUP_Modbus<byte> rtup_m = new RTUP_Modbus<byte>();
                     rtup_m.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
                     rtup_m.length = Convert.ToByte(Convert.ToInt32(txt.Split('-')[2], 16));
                     /*rtup_m.sensor_ID = sensor_data;
@@ -637,6 +677,150 @@ namespace TCPSocketCl
                     return log;
                 }
                 else return ""; 
+            }
+            else if (sensor_data == 6)
+            {
+                byte packet_data = Convert.ToByte(txt.Split('-')[4]);
+                if (packet_data == 1)
+                {
+                    RTUP_232<byte> rtup_m = new RTUP_232<byte>();
+                    rtup_m.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
+                    rtup_m.length = Convert.ToByte(Convert.ToInt32(txt.Split('-')[2], 16));
+                    /*rtup_m.sensor_ID = sensor_data;
+                    rtup_m.packet_mode = Convert.ToByte(Convert.ToInt32(txt.Split('-')[4]));
+                    rtup_m.slave_addr = Convert.ToByte(Convert.ToInt32(txt.Split('-')[5],16));
+                    rtup_m.func = Convert.ToByte(Convert.ToInt32(txt.Split('-')[6], 16));
+                    rtup_m.start_addrH = Convert.ToByte(Convert.ToInt32(txt.Split('-')[7], 16));
+                    rtup_m.start_addrL = Convert.ToByte(Convert.ToInt32(txt.Split('-')[8], 16));
+                    rtup_m.length_H = Convert.ToByte(Convert.ToInt32(txt.Split('-')[9], 16));
+                    rtup_m.length_L = Convert.ToByte(Convert.ToInt32(txt.Split('-')[10], 16));
+                    rtup_m.crc[0] = Convert.ToByte(Convert.ToInt32(txt.Split('-')[11], 16));
+                    rtup_m.crc[1] = Convert.ToByte(Convert.ToInt32(txt.Split('-')[12], 16));
+                    */
+                    string device = socketInfo.IP + ":" + socketInfo.PORT;
+                    int device_num = 0;
+                    if (rtup_m.usys_device_ID == 0x74) device_num = 1;
+                    else
+                    {
+                        log = device_judge[device_num];
+                        return log;
+                    }
+                    if (rtup_m.length == 15) log = "Device '" + device + "'으로 RS-232 Modbus Data Tx Packet 전송";
+                    else
+                    {
+                        log = "잘못된 크기로 인한 전송 실패";
+
+                    }
+                    return log;
+                }
+                else if (packet_data == 2)
+                {
+                    RTUP_232<byte> rtup_m = new RTUP_232<byte>();
+
+                    string device = socketInfo.IP + ":" + socketInfo.PORT;
+                    rtup_m.usys_device_ID = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[1], 16));
+                    rtup_m.length = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[2], 16));
+                    rtup_m.frame_header = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[5], 16));
+                    rtup_m.module_address = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[6], 16));
+                    rtup_m.command_length = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[7], 16));
+                    rtup_m.command = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[8], 16));
+                    rtup_m.relay_1 = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[9], 16));
+                    rtup_m.relay_2 = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[10], 16));
+                    rtup_m.relay_3 = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[11], 16));
+                    rtup_m.relay_4 = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[12], 16));
+                    int dec_cksum = rtup_m.frame_header + rtup_m.module_address + rtup_m.command_length + rtup_m.command + rtup_m.relay_1
+                        + rtup_m.relay_2 + rtup_m.relay_3 + rtup_m.relay_4;
+                    //string device = socketInfo.IP + ":" + socketInfo.PORT;
+
+                    int device_num = 0;
+                    if (rtup_m.usys_device_ID == 0x74) device_num = 1;
+                    else
+                    {
+                        log = device_judge[device_num];
+                        return log;
+                    }
+                    string relay1, relay2, relay3, relay4 = string.Empty;
+                    string start_cksum = string.Empty;
+                    string last_cksum = string.Empty;
+                    if (hex_cksum.Length >= 3)
+                    {
+                        start_cksum = hex_cksum.Substring(0, hex_cksum.Length - 2);
+                        last_cksum = hex_cksum.Substring(hex_cksum.Length - 2);
+                        if (start_cksum.Length == 1)
+                        {
+                            start_cksum = "0" + start_cksum;
+                        }
+                    }
+                    else
+                    {
+                        start_cksum = "00";
+                        last_cksum = hex_cksum;
+                        if (last_cksum.Length == 1)
+                        {
+                            last_cksum = "0" + last_cksum;
+                        }
+                    }
+                    if (start_cksum != txt.Split('-')[rtup_m.length - 2] || last_cksum != txt.Split('-')[rtup_m.length - 1])
+                    {
+                        log = "CheckSum 오류";
+                        return log;
+                    }
+                    else
+                    {
+                        if (rtup_m.relay_1 == 0x02)
+                        {
+                            relay1 = "ON";
+                        }
+                        else if (rtup_m.relay_1 == 0x01)
+                        {
+                            relay1 = "OFF";
+                        }
+                        else
+                        {
+                            relay1 = "ERROR";
+                        }
+                        if (rtup_m.relay_2 == 0x02)
+                        {
+                            relay2 = "ON";
+                        }
+                        else if (rtup_m.relay_2 == 0x01)
+                        {
+                            relay2 = "OFF";
+                        }
+                        else
+                        {
+                            relay2 = "ERROR";
+                        }
+                        if (rtup_m.relay_3 == 0x02)
+                        {
+                            relay3 = "ON";
+                        }
+                        else if (rtup_m.relay_3 == 0x01)
+                        {
+                            relay3 = "OFF";
+                        }
+                        else
+                        {
+                            relay3 = "ERROR";
+                        }
+                        if (rtup_m.relay_4 == 0x02)
+                        {
+                            relay4 = "ON";
+                        }
+                        else if (rtup_m.relay_4 == 0x01)
+                        {
+                            relay4 = "OFF";
+                        }
+                        else
+                        {
+                            relay4 = "ERROR";
+                        }
+                        log = "Device '" + device + "'에서 " + "RS-232 Modbus Data " + "Relay 1 " + relay1 + " , Relay 2 " + relay2 + " , Relay 3 " + relay3 + " , Relay 4 " + relay4 + " 수신";
+                        return log;
+                    }
+                    
+                }
+                else return "";
             }
             else
             {
@@ -801,14 +985,14 @@ namespace TCPSocketCl
                             //체크섬 뒤에 eof 값이 나와야하므로 3이 아니면 지금까지 읽은 값들은 잘못된 값이다.
                             if (eof_data == 0x03)
                             {
-                                byte[] receiveBuff = new byte[9] { sof_data, device_data, length_data, sensor_data, ch_data,_data, ck1_data, ck2_data, eof_data };
+                                byte[] receiveBuff = new byte[9] { sof_data, device_data, length_data, sensor_data, ch_data, _data, ck1_data, ck2_data, eof_data };
                                 socketInfo.r_Buff = receiveBuff;
                                 strHexSplit = BitConverter.ToString(receiveBuff);
                                 hex_cksum = String.Format("{0:x2}", dec_cksum).ToUpper();
                                 break;
                             }
                         }
-                        else if(length_data == 0x0D)
+                        else if (length_data == 0x0D)
                         {
                             CheckQueue(socketInfo, recvBuff);
                             byte sensor_data = recvBuff.Dequeue();
@@ -846,19 +1030,20 @@ namespace TCPSocketCl
                             hex_cksum = "EE";
                             break;
                         }
-                    
-                
+
+
                         else if (length_data == 0x0E)
                         {
                             CheckQueue(socketInfo, recvBuff);
                             byte sensor_data = recvBuff.Dequeue();
                             i++;
+
                             CheckQueue(socketInfo, recvBuff);
                             byte packet_data = recvBuff.Dequeue();
                             i++;
                             CheckQueue(socketInfo, recvBuff);
                             byte slave_data = recvBuff.Dequeue();
-                            i++;                           
+                            i++;
                             CheckQueue(socketInfo, recvBuff);
                             byte function_data = recvBuff.Dequeue();
                             i++;
@@ -890,10 +1075,61 @@ namespace TCPSocketCl
                             strHexSplit = BitConverter.ToString(receiveBuff);
                             hex_cksum = String.Format("{0:x2}", 238).ToUpper();
                             break;
+
+                        }
+                        else if (length_data == 0x0F)
+                        {
+                            CheckQueue(socketInfo, recvBuff);
+                            byte sensor_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte packet_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte frame_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte module_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte command_length_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte command = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte relay1_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte relay2_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte relay3_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte relay4_data = recvBuff.Dequeue();
+                            i++;
+
+                            dec_cksum = frame_data + module_data + command_length_data + command + relay1_data + relay2_data + relay3_data + relay4_data;
+
+                            CheckQueue(socketInfo, recvBuff);
+                            byte ck1_data = recvBuff.Dequeue();
+                            i++;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte ck2_data = recvBuff.Dequeue();
+                            i++;
+                            byte[] receiveBuff = new byte[15] {
+                                    sof_data, device_data, length_data, sensor_data, packet_data,
+                                    frame_data,module_data,command_length_data,command,relay1_data,
+                                    relay2_data,relay3_data,relay4_data,ck1_data,ck2_data };
+                            socketInfo.r_Buff = receiveBuff;
+                            strHexSplit = BitConverter.ToString(receiveBuff);
+                            hex_cksum = String.Format("{0:x2}", dec_cksum).ToUpper();
+                            break;
                         }
                     }
                 }
-                
+
                 if (strHexSplit != string.Empty )
                 {
                     resultSet = Convert.ToInt32(strHexSplit.Split('-')[3], 16);

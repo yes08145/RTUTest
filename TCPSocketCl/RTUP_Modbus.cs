@@ -7,26 +7,25 @@ using MetroFramework.Controls;
 
 namespace TCPSocketCl
 {
-    class RTUP_Modbus
+    class RTUP_Modbus<T>
     {
-        public byte sof { get; set; }
-        public byte usys_device_ID { get; set; }
-        public byte length { get; set; }
-        public byte sensor_ID { get; set; }
-        public byte packet_mode { get; set; } // 0x00 Tx   0x01 Rx
-        public byte slave_addr { get; set; }
-        public byte func { get; set; }
-        public byte byte_count;
-        public byte start_addrH { get; set; }
-        public byte start_addrL { get; set; }
-        public byte length_H { get; set; }
-        public byte length_L { get; set; }
-        public byte[] crc = new byte[2];
+        public T sof { get; set; }
+        public T usys_device_ID { get; set; }
+        public T length { get; set; }
+        public T sensor_ID { get; set; }
+        public T packet_mode { get; set; } // 0x00 Tx   0x01 Rx
+        public T slave_addr { get; set; }
+        public T func { get; set; }
+        public T start_addrH { get; set; }
+        public T start_addrL { get; set; }
+        public T length_H { get; set; }
+        public T length_L { get; set; }
+        public T[] crc = new T[2];
         public RTUP_Modbus()
         {
 
         }
-        public RTUP_Modbus(byte sof,byte usys_device_ID, byte length, byte sensor_ID, byte packet_mode, byte slave_addr, byte func, byte start_addrH, byte start_addrL,byte length_H, byte length_L)
+        public RTUP_Modbus(T sof,T usys_device_ID, T length, T sensor_ID, T packet_mode, T slave_addr, T func, T start_addrH, T start_addrL,T length_H, T length_L)
         {
             this.sof = sof;
             this.usys_device_ID = usys_device_ID;

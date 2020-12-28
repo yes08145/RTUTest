@@ -87,6 +87,7 @@
     </Compile>
     <Compile Include="ResultSet.cs" />
     <Compile Include="RTUP.cs" />
+    <Compile Include="RTUP_232.cs" />
     <Compile Include="RTUP_Modbus.cs" />
     <Compile Include="SocketInfo.cs" />
     <Compile Include="TModbusRTU.cs" />

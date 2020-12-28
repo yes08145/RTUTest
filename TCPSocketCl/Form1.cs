@@ -54,7 +54,8 @@ namespace TCPSocketCl
         public delegate void LogDelegate(string msg);
         //public static SocketClass socketClass = null;
         private static List<string> ipList = new List<string>();
-        private static List<RTUP_Modbus> saved_protocal = new List<RTUP_Modbus>();
+        private static List<RTUP_Modbus<string>> saved_protocal = new List<RTUP_Modbus<string>>();
+        private static List<RTUP_232<string>> saved_protocal_232 = new List<RTUP_232<string>>();
 
 
         public Form1()
@@ -77,6 +78,7 @@ namespace TCPSocketCl
             //this.dataGridView1.RowHeadersDefaultCellStyle.BackColor = System.Drawing.SystemColors.ScrollBar;
             this.ActiveControl = textBox_IP1;
             Dgv_protocol_create();
+            Dgv_Protocol_RS232_Create();
         }
 
         private void btn_connect_Click(object sender, EventArgs e)
@@ -417,18 +419,19 @@ namespace TCPSocketCl
         }
         private void Dgv_protocol_create()
         {
-            RTUP_Modbus rtup_modbus = new RTUP_Modbus(0x02, 0x74, 0x0D, 0x05, 0x00, 0x01, 0x03, 0x01, 0xF4, 0x00, 0x02);
-            byte[] target = new byte[6] {
-                rtup_modbus.slave_addr,
-                rtup_modbus.func,
-                rtup_modbus.start_addrH,
-                rtup_modbus.start_addrL,
-                rtup_modbus.length_H,
-                rtup_modbus.length_L
-            };
+            RTUP_Modbus<string> rtup_modbus = new RTUP_Modbus<string>("02", "74", "0D", "05", "00", "01", "03", "01", "F4", "00", "02");
+           
+            byte[] target = new byte[6];
+            target[0] = Convert.ToByte(rtup_modbus.slave_addr,16);
+            target[1] = Convert.ToByte(rtup_modbus.func,16);
+            target[2] = Convert.ToByte(rtup_modbus.start_addrH,16);
+            target[3] = Convert.ToByte(rtup_modbus.start_addrL,16);
+            target[4] = Convert.ToByte(rtup_modbus.length_H,16);
+            target[5] = Convert.ToByte(rtup_modbus.length_L,16);
 
-            rtup_modbus.crc = TModbusRTU.MakeCRC16_byte(target, 6);
+            //rtup_modbus.crc = TModbusRTU.MakeCRC16_byte(target, 6);
             saved_protocal.Add(rtup_modbus);
+            /*
             dgv_protocol.AutoGenerateColumns = false;
             DataGridViewTextBoxColumn makeColumn = new DataGridViewTextBoxColumn();
             makeColumn.DataPropertyName = "sof";
@@ -485,13 +488,47 @@ namespace TCPSocketCl
             makeColumn.HeaderText = "Length(Low)";
             makeColumn.DefaultCellStyle.Format = "X02";
             dgv_protocol.Columns.Add(makeColumn);
+            */
 
             dgv_protocol.DataSource = saved_protocal;
+        }
+        private void Dgv_Protocol_RS232_Create()
+        {
+            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "0F", "06", "01", "24", "01", "06", "01", "02", "01", "01", "01"));
+            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "0F", "06", "01", "24", "01", "06", "01", "01", "02", "01", "01"));
+            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "0F", "06", "01", "24", "01", "06", "01", "01", "01", "02", "01"));
+            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "0F", "06", "01", "24", "01", "06", "01", "01", "01", "01", "02"));
+            dgv_protocol_232.DataSource = saved_protocal_232;
         }
 
         private void Btn_send_rs485_Click(object sender, EventArgs e)
         {
             sensorID = 5;
+            try
+            {
+                foreach (SocketInfo usedSockInfo in socketInfo)
+                {
+                    if (usedSockInfo.index == dgv_constate.SelectedRows[0].Index)
+                    {
+                        if (usedSockInfo.conn)
+                        {
+                            StartThread(usedSockInfo, Send, "send");
+                        }
+                    }
+                }
+            }
+            catch (NullReferenceException ex)
+            {
+                MessageBox.Show("설정 값을 보낼 서버를 선택해주십시오.");
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                MessageBox.Show("설정 값을 보낼 서버를 선택해주십시오.");
+            }
+        }
+        private void Btn_send_rs232_Click(object sender, EventArgs e)
+        {
+            sensorID = 6;
             try
             {
                 foreach (SocketInfo usedSockInfo in socketInfo)
