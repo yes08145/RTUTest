@@ -545,13 +545,16 @@ namespace TCPSocketCl
                         Convert.ToByte(rtup_protocol.module_address, 16), Convert.ToByte(rtup_protocol.command_length, 16),
                         Convert.ToByte(rtup_protocol.command, 16), Convert.ToByte(rtup_protocol.relay_1, 16),
                         Convert.ToByte(rtup_protocol.relay_2, 16), Convert.ToByte(rtup_protocol.relay_3, 16),
-                        Convert.ToByte(rtup_protocol.relay_4, 16));
-                    int checkSum = rtup_232.frame_header + rtup_232.module_address + rtup_232.command_length
+                        Convert.ToByte(rtup_protocol.relay_4, 16),Convert.ToByte(rtup_protocol.eof,16));
+                    int module_checkSum = rtup_232.frame_header + rtup_232.module_address + rtup_232.command_length
                         + rtup_232.command + rtup_232.relay_1 + rtup_232.relay_2 + rtup_232.relay_3 + rtup_232.relay_4;
+                    int checkSum = rtup_232.sof + rtup_232.usys_device_ID + rtup_232.length + rtup_232.sensor_ID +
+                        rtup_232.packet_mode + module_checkSum;
+                    rtup_232.module_check_sum = (byte)(module_checkSum);
                     rtup_232.check_sum[0] = (byte)(checkSum / 256);
                     rtup_232.check_sum[1] = (byte)(checkSum % 256);
 
-                    msg = new byte[15];
+                    msg = new byte[17];
                     msg[0] = rtup_232.sof;
                     msg[1] = rtup_232.usys_device_ID;
                     msg[2] = rtup_232.length;
@@ -565,8 +568,10 @@ namespace TCPSocketCl
                     msg[10] = rtup_232.relay_2;
                     msg[11] = rtup_232.relay_3;
                     msg[12] = rtup_232.relay_4;
-                    msg[13] = rtup_232.check_sum[0];
-                    msg[14] = rtup_232.check_sum[1];
+                    msg[13] = rtup_232.module_check_sum;
+                    msg[14] = rtup_232.check_sum[0];
+                    msg[15] = rtup_232.check_sum[1];
+                    msg[16] = rtup_232.eof;
                 }
                 else
                 {
@@ -705,7 +710,8 @@ namespace TCPSocketCl
                         log = device_judge[device_num];
                         return log;
                     }
-                    if (rtup_m.length == 15) log = "Device '" + device + "'으로 RS-232 Modbus Data Tx Packet 전송";
+                    if (rtup_m.length == 17) log = "Device '" + device + "'으로 RS-232 Modbus Data Tx Packet 전송";
+                    else if (rtup_m.length == 16) log = "Device '" + device + "'으로 RS-232 Modbus Data Tx Packet 전송";
                     else
                     {
                         log = "잘못된 크기로 인한 전송 실패";
@@ -728,10 +734,10 @@ namespace TCPSocketCl
                     rtup_m.relay_2 = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[10], 16));
                     rtup_m.relay_3 = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[11], 16));
                     rtup_m.relay_4 = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[12], 16));
-                    int dec_cksum = rtup_m.frame_header + rtup_m.module_address + rtup_m.command_length + rtup_m.command + rtup_m.relay_1
-                        + rtup_m.relay_2 + rtup_m.relay_3 + rtup_m.relay_4;
+                    rtup_m.module_check_sum = Convert.ToByte(Convert.ToInt32("0x" + txt.Split('-')[13], 16));
                     //string device = socketInfo.IP + ":" + socketInfo.PORT;
-
+                     byte module_checkSum = (byte)(rtup_m.frame_header + rtup_m.module_address + rtup_m.command_length + rtup_m.command +
+                        rtup_m.relay_1 + rtup_m.relay_2 + rtup_m.relay_3 + rtup_m.relay_4);
                     int device_num = 0;
                     if (rtup_m.usys_device_ID == 0x74) device_num = 1;
                     else
@@ -760,62 +766,70 @@ namespace TCPSocketCl
                             last_cksum = "0" + last_cksum;
                         }
                     }
-                    if (start_cksum != txt.Split('-')[rtup_m.length - 2] || last_cksum != txt.Split('-')[rtup_m.length - 1])
+                    if(rtup_m.module_check_sum == module_checkSum)
                     {
-                        log = "CheckSum 오류";
-                        return log;
+                        if (start_cksum != txt.Split('-')[rtup_m.length - 3] || last_cksum != txt.Split('-')[rtup_m.length - 2])
+                        {
+                            log = "CheckSum 오류";
+                            return log;
+                        }
+                        else
+                        {
+                            if (rtup_m.relay_1 == 0x02)
+                            {
+                                relay1 = "ON";
+                            }
+                            else if (rtup_m.relay_1 == 0x01)
+                            {
+                                relay1 = "OFF";
+                            }
+                            else
+                            {
+                                relay1 = "ERROR";
+                            }
+                            if (rtup_m.relay_2 == 0x02)
+                            {
+                                relay2 = "ON";
+                            }
+                            else if (rtup_m.relay_2 == 0x01)
+                            {
+                                relay2 = "OFF";
+                            }
+                            else
+                            {
+                                relay2 = "ERROR";
+                            }
+                            if (rtup_m.relay_3 == 0x02)
+                            {
+                                relay3 = "ON";
+                            }
+                            else if (rtup_m.relay_3 == 0x01)
+                            {
+                                relay3 = "OFF";
+                            }
+                            else
+                            {
+                                relay3 = "ERROR";
+                            }
+                            if (rtup_m.relay_4 == 0x02)
+                            {
+                                relay4 = "ON";
+                            }
+                            else if (rtup_m.relay_4 == 0x01)
+                            {
+                                relay4 = "OFF";
+                            }
+                            else
+                            {
+                                relay4 = "ERROR";
+                            }
+                            log = "Device '" + device + "'에서 " + "RS-232 Modbus Data " + "Relay 1 " + relay1 + " , Relay 2 " + relay2 + " , Relay 3 " + relay3 + " , Relay 4 " + relay4 + " 수신";
+                            return log;
+                        }
                     }
                     else
                     {
-                        if (rtup_m.relay_1 == 0x02)
-                        {
-                            relay1 = "ON";
-                        }
-                        else if (rtup_m.relay_1 == 0x01)
-                        {
-                            relay1 = "OFF";
-                        }
-                        else
-                        {
-                            relay1 = "ERROR";
-                        }
-                        if (rtup_m.relay_2 == 0x02)
-                        {
-                            relay2 = "ON";
-                        }
-                        else if (rtup_m.relay_2 == 0x01)
-                        {
-                            relay2 = "OFF";
-                        }
-                        else
-                        {
-                            relay2 = "ERROR";
-                        }
-                        if (rtup_m.relay_3 == 0x02)
-                        {
-                            relay3 = "ON";
-                        }
-                        else if (rtup_m.relay_3 == 0x01)
-                        {
-                            relay3 = "OFF";
-                        }
-                        else
-                        {
-                            relay3 = "ERROR";
-                        }
-                        if (rtup_m.relay_4 == 0x02)
-                        {
-                            relay4 = "ON";
-                        }
-                        else if (rtup_m.relay_4 == 0x01)
-                        {
-                            relay4 = "OFF";
-                        }
-                        else
-                        {
-                            relay4 = "ERROR";
-                        }
-                        log = "Device '" + device + "'에서 " + "RS-232 Modbus Data " + "Relay 1 " + relay1 + " , Relay 2 " + relay2 + " , Relay 3 " + relay3 + " , Relay 4 " + relay4 + " 수신";
+                        log = "Module CheckSum 오류";
                         return log;
                     }
                     
@@ -1077,7 +1091,7 @@ namespace TCPSocketCl
                             break;
 
                         }
-                        else if (length_data == 0x0F)
+                        else if (length_data == 0x11)
                         {
                             CheckQueue(socketInfo, recvBuff);
                             byte sensor_data = recvBuff.Dequeue();
@@ -1110,22 +1124,32 @@ namespace TCPSocketCl
                             byte relay4_data = recvBuff.Dequeue();
                             i++;
 
-                            dec_cksum = frame_data + module_data + command_length_data + command + relay1_data + relay2_data + relay3_data + relay4_data;
-
+                            dec_cksum = sof_data+ device_data+length_data+sensor_data+packet_data+ frame_data + module_data 
+                                + command_length_data + command + relay1_data + relay2_data + relay3_data + relay4_data;
+                            CheckQueue(socketInfo, recvBuff);
+                            byte module_checkSum_data = recvBuff.Dequeue();
+                            i++;
                             CheckQueue(socketInfo, recvBuff);
                             byte ck1_data = recvBuff.Dequeue();
                             i++;
                             CheckQueue(socketInfo, recvBuff);
                             byte ck2_data = recvBuff.Dequeue();
                             i++;
-                            byte[] receiveBuff = new byte[15] {
+                            CheckQueue(socketInfo, recvBuff);
+                            byte eof_data = recvBuff.Dequeue();
+                            i++;
+                            if (eof_data == 0x03)
+                            {
+                                byte[] receiveBuff = new byte[17] {
                                     sof_data, device_data, length_data, sensor_data, packet_data,
                                     frame_data,module_data,command_length_data,command,relay1_data,
-                                    relay2_data,relay3_data,relay4_data,ck1_data,ck2_data };
-                            socketInfo.r_Buff = receiveBuff;
-                            strHexSplit = BitConverter.ToString(receiveBuff);
-                            hex_cksum = String.Format("{0:x2}", dec_cksum).ToUpper();
-                            break;
+                                    relay2_data,relay3_data,relay4_data,module_checkSum_data,ck1_data,ck2_data,eof_data };
+                                socketInfo.r_Buff = receiveBuff;
+                                strHexSplit = BitConverter.ToString(receiveBuff);
+                                hex_cksum = String.Format("{0:x2}", dec_cksum).ToUpper();
+                                break;
+                            }
+                            
                         }
                     }
                 }

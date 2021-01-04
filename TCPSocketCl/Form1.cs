@@ -494,10 +494,10 @@ namespace TCPSocketCl
         }
         private void Dgv_Protocol_RS232_Create()
         {
-            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "0F", "06", "01", "24", "01", "06", "01", "02", "01", "01", "01"));
-            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "0F", "06", "01", "24", "01", "06", "01", "01", "02", "01", "01"));
-            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "0F", "06", "01", "24", "01", "06", "01", "01", "01", "02", "01"));
-            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "0F", "06", "01", "24", "01", "06", "01", "01", "01", "01", "02"));
+            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "11", "06", "01", "24", "01", "06", "01", "02", "01", "01", "01","03"));
+            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "11", "06", "01", "24", "01", "06", "01", "01", "02", "01", "01", "03"));
+            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "11", "06", "01", "24", "01", "06", "01", "01", "01", "02", "01", "03"));
+            saved_protocal_232.Add(new RTUP_232<string>("02", "74", "11", "06", "01", "24", "01", "06", "01", "01", "01", "01", "02", "03"));
             dgv_protocol_232.DataSource = saved_protocal_232;
         }
 
