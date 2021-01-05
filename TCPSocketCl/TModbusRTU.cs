@@ -50,7 +50,7 @@ namespace TCPSocketCl
             }
             byte[] ret = BitConverter.GetBytes((ushort)icrc);
             //reverse
-            Array.Reverse(ret);
+            //Array.Reverse(ret);
             return ret;
         }
     }

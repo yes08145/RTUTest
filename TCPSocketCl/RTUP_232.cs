@@ -21,14 +21,16 @@ namespace TCPSocketCl
         public T relay_2 { get; set; }
         public T relay_3 { get; set; }
         public T relay_4 { get; set; }
+        public T module_check_sum;
         public T[] check_sum = new T[2];
+        public T eof { get; set; }
 
         public RTUP_232()
         {
 
         }
         public RTUP_232(T sof, T usys_device_ID, T length, T sensor_ID, T packet_mode, T frame_header,
-            T module_address, T command_length, T command, T relay_1, T relay_2, T relay_3, T relay_4)
+            T module_address, T command_length, T command, T relay_1, T relay_2, T relay_3, T relay_4,T eof)
         {
             this.sof = sof;
             this.usys_device_ID = usys_device_ID;
@@ -43,6 +45,7 @@ namespace TCPSocketCl
             this.relay_2 = relay_2;
             this.relay_3 = relay_3;
             this.relay_4 = relay_4;
+            this.eof = eof;
         }
     }
 }
